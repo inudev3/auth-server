@@ -1,10 +1,11 @@
 use diesel::{r2d2::ConnectionManager, PgConnection};
-
+use super::schema::*;
+use serde::{Deserialize,Serialize};
 use uuid::Uuid;
 
-pub type pool = r2d2::Pool<ConnectionManager<PgConnection>>;
-#[derive(Debug, Serialize, Deserialize, Queryable, Insertable)]
-#[table_name = "users"]
+pub type PgPool = r2d2::Pool<ConnectionManager<PgConnection>>;
+#[derive(Insertable,Debug, Serialize, Deserialize, Queryable)]
+#[diesel(table_name=users)]
 pub struct User {
     pub email: String,
     pub hash: String,
@@ -19,8 +20,18 @@ impl User {
         }
     }
 }
-#[derive(Debug, Serialize, Deserialize, Queryable, Insertable)]
-#[table_name = "invitations"]
+#[derive(Debug,Serialize,Deserialize)]
+pub struct SlimUser{
+    pub email:String
+}
+impl From<User> for SlimUser{
+    fn from(value: User) -> Self {
+        Self{email:value.email}
+    }
+}
+
+#[derive(Insertable,Debug, Serialize, Deserialize, Queryable)]
+#[diesel(table_name = invitations)]
 pub struct Invitation {
     pub id: Uuid,
     pub email: String,

@@ -1,17 +1,25 @@
 #[macro_use]
 extern crate diesel;
-
+#[macro_use]
+extern crate lazy_static;
 use actix_identity::{CookieIdentityPolicy, IdentityService};
 use actix_web::{middleware, web, App, HttpServer};
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
-
+use crate::model::PgPool;
 
 
 pub mod model;
 pub mod utils;
+pub mod errors;
+pub mod invitation_handler;
+pub mod schema;
+pub mod email_service;
+pub mod register_handler;
+pub mod auth_handler;
 
-#[actix_rt::main]
+
+#[actix_web::main]
 async fn main() -> std::io::Result<()>{
     dotenv::dotenv().ok();
     std::env::set_var(
@@ -21,7 +29,7 @@ async fn main() -> std::io::Result<()>{
     let database_url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set.");
     // create db connection pool
     let manager = ConnectionManager::<PgConnection>::new(database_url);
-    let pool: models::Pool = r2d2::Pool::builder()
+    let pool: PgPool = r2d2::Pool::builder()
         .build(manager)
         .expect("Failed to create pool.");
     let domain: String = std::env::var("DOMAIN").unwrap_or_else(|_| "localhost".to_string());
@@ -43,7 +51,9 @@ async fn main() -> std::io::Result<()>{
                 web::scope("/api")
                     .service(web::resource("/invitation")
                         .route(web::post().to(invitation_handler::post_invitation))
-                    )
+                    ).service(web::resource("/register/{invitation_id}")
+                    .route(web::post().to(register_handler::register_user))
+                )
             )
     }).bind("127.0.0.1:8080")?.run().await
 }
